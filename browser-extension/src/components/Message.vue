@@ -1,67 +1,103 @@
 <script lang="ts" setup>
-import { computed, nextTick, ref, onMounted, onBeforeUnmount } from 'vue'
-import { useI18n } from 'vue-i18n'
-import MarkdownIt from 'markdown-it'
-import hljs from 'highlight.js'
-import 'highlight.js/styles/base16/gigavolt.min.css'
-import MarkdownItPlantuml from 'markdown-it-plantuml'
-import { ExclamationCircleIcon, CircleFilledIcon } from 'vue-tabler-icons'
-import NewPromptButton from './NewPromptButton.vue'
-import CopyButton from './CopyButton.vue'
-import * as echarts from 'echarts'
-import moment from 'moment'
+import { computed, nextTick, ref, onMounted, onBeforeUnmount } from "vue";
+import { useI18n } from "vue-i18n";
+import MarkdownIt from "markdown-it";
+import hljs from "highlight.js";
+import "highlight.js/styles/base16/gigavolt.min.css";
+import MarkdownItPlantuml from "markdown-it-plantuml";
+import { ExclamationCircleIcon, CircleFilledIcon } from "vue-tabler-icons";
+import NewPromptButton from "./NewPromptButton.vue";
+import CopyButton from "./CopyButton.vue";
+import * as echarts from "echarts";
+import moment from "moment";
 
-const props = defineProps<{ text: string, file: Record<string, string>, isUser: boolean, isComplete: boolean, isSuccess: boolean, agentLogo: string, agentName: string, agentId: string }>()
-const { t } = useI18n()
-const renderedMsg = computed(() => props.isUser ? props.text.replaceAll('\n', '<br/>') : renderMarkDown(props.text))
+const props = defineProps<{
+  text: string;
+  file: Record<string, string>;
+  isUser: boolean;
+  isComplete: boolean;
+  isSuccess: boolean;
+  agentLogo: string;
+  agentName: string;
+  agentId: string;
+}>();
+const { t } = useI18n();
+const renderedMsg = computed(() => (props.isUser ? props.text.replaceAll("\n", "<br/>") : renderMarkDown(props.text)));
 const messageElement = ref<HTMLElement | null>(null);
-const resizeObserver: ResizeObserver = new ResizeObserver(onResize)
+const resizeObserver: ResizeObserver = new ResizeObserver(onResize);
 var chart: any;
 var prevWidth: number = 0;
+const isExpanded = ref(false);
+
+const steps = ref<string[]>([]);
+const allSteps = ["Analizando el mensaje del usuario", "Llamando herramienta clock()", "Generando respuesta final..."];
+
+const currentStep = ref("");
+let stepIndex = 0;
+
+onMounted(() => {
+  const interval = setInterval(() => {
+    if (stepIndex < allSteps.length) {
+      const step = allSteps[stepIndex];
+      steps.value.push(step);
+      currentStep.value = step;
+      stepIndex++;
+    } else {
+      clearInterval(interval);
+      setTimeout(() => {
+        currentStep.value = "";
+      }, 103);
+    }
+  }, 2000);
+});
 
 function renderMarkDown(text: string) {
   let md = new MarkdownIt({
     highlight: (code: string, lang: string) => {
-      let ret = code
+      let ret = code;
       if (lang && hljs.getLanguage(lang)) {
         try {
-          ret = hljs.highlight(code, { language: lang }).value
-        } catch (__) { }
+          ret = hljs.highlight(code, { language: lang }).value;
+        } catch (__) {}
       }
-      return '<pre><code class="hljs">' + ret + '</code></pre>'
-    }
-  })
-  useTargetBlankLinks(md)
-  useEcharts(md)
-  md.use(MarkdownItPlantuml)
-  return md.render(text)
+      return '<pre><code class="hljs">' + ret + "</code></pre>";
+    },
+  });
+  useTargetBlankLinks(md);
+  useEcharts(md);
+  md.use(MarkdownItPlantuml);
+  return md.render(text);
 }
 
 function useTargetBlankLinks(md: MarkdownIt) {
-  let defaultRender = md.renderer.rules.link_open || function (tokens, idx, options, env, self) {
-    return self.renderToken(tokens, idx, options)
-  }
+  let defaultRender =
+    md.renderer.rules.link_open ||
+    function (tokens, idx, options, env, self) {
+      return self.renderToken(tokens, idx, options);
+    };
   md.renderer.rules.link_open = function (tokens, idx, options, env, self) {
-    tokens[idx].attrSet('target', '_blank')
-    return defaultRender(tokens, idx, options, env, self)
-  }
+    tokens[idx].attrSet("target", "_blank");
+    return defaultRender(tokens, idx, options, env, self);
+  };
 }
 
 function useEcharts(md: MarkdownIt) {
-  const defaultRender = md.renderer.rules.fence || function (tokens, idx, options, env, self) {
-    return self.renderToken(tokens, idx, options);
-  };
+  const defaultRender =
+    md.renderer.rules.fence ||
+    function (tokens, idx, options, env, self) {
+      return self.renderToken(tokens, idx, options);
+    };
   md.renderer.rules.fence = function (tokens, idx, options, env, self) {
     const token = tokens[idx];
     const code = token.content.trim();
-    if (token.info === 'echarts') {
+    if (token.info === "echarts") {
       nextTick().then(() => {
         const container = messageElement.value!;
-        const chartDiv = container.querySelector('.echarts');
-        const chartData = container.querySelector('.echarts-data');
+        const chartDiv = container.querySelector(".echarts");
+        const chartData = container.querySelector(".echarts-data");
         if (chartDiv && chartData) {
           chart = echarts.init(chartDiv as HTMLDivElement);
-          const options = JSON.parse(chartData.textContent || '');
+          const options = JSON.parse(chartData.textContent || "");
           solveEchartsFormatter(options.xAxis.axisLabel);
           solveEchartsFormatter(options.xAxis.axisPointer.label);
           chart.setOption(options);
@@ -75,20 +111,20 @@ function useEcharts(md: MarkdownIt) {
 
 function solveEchartsFormatter(obj: any) {
   if (obj && obj.formatter) {
-    if (obj.formatter.name === 'formatEpoch') {
-      obj.formatter = formatEpoch(obj.formatter)
+    if (obj.formatter.name === "formatEpoch") {
+      obj.formatter = formatEpoch(obj.formatter);
     }
   }
 }
 
 function formatEpoch(config: any): (value: any) => string {
   return (value: any) => {
-    if (typeof value === 'object') {
+    if (typeof value === "object") {
       value = value.value;
     }
-    const time = moment(parseInt(value))
+    const time = moment(parseInt(value));
     return time.format(config.format);
-  }
+  };
 }
 
 function onResize() {
@@ -100,15 +136,15 @@ function onResize() {
 
 onMounted(() => {
   if (messageElement.value) {
-    resizeObserver.observe(messageElement.value)
+    resizeObserver.observe(messageElement.value);
   }
-})
+});
 
 onBeforeUnmount(() => {
   if (messageElement.value) {
-    resizeObserver.unobserve(messageElement.value)
+    resizeObserver.unobserve(messageElement.value);
   }
-})
+});
 </script>
 
 <template>
@@ -117,6 +153,7 @@ onBeforeUnmount(() => {
       <template v-if="isUser">
         <circle-filled-icon class="text-violet-600" />
       </template>
+
       <template v-else-if="!isUser && isSuccess">
         <img :src="agentLogo" class="w-5 mr-1 rounded-full" />
       </template>
@@ -124,22 +161,46 @@ onBeforeUnmount(() => {
         <exclamation-circle-icon class="text-red-600" />
       </template>
 
-      <span class="text-base">{{ isUser ? t('you') : agentName }}</span>
+      <span class="text-base">{{ isUser ? t("you") : agentName }}</span>
+
       <div class="flex-auto flex justify-end">
         <CopyButton v-if="!isUser && text" :text="text" :html="renderedMsg" />
         <NewPromptButton v-if="isUser && text" :is-large-icon="false" :text="text" :agent-id="agentId" />
       </div>
     </div>
+
+    <div v-if="!isUser" class="reasoning">
+      <div class="flex justify-end items-center">
+        <button @click="isExpanded = !isExpanded" class="text-xs text-gray-500 hover:text-gray-700 transition">
+          {{ isExpanded ? "▼" : "►" }}
+        </button>
+      </div>
+
+      <div class="mt-4">
+        <template v-if="isExpanded">
+          <ul style="list-style: none; padding-left: 0">
+            <li class="list-none" v-for="(step, index) in steps" :key="index">{{ step }}</li>
+          </ul>
+        </template>
+        <template v-else>
+          <p>{{ currentStep }}</p>
+        </template>
+      </div>
+    </div>
+
     <div class="mt-2 ml-8 mr-2">
       <div>
         <template v-if="file.data">
           <audio controls>
-            <source :src="file.url" type="audio/webm">
+            <source :src="file.url" type="audio/webm" />
           </audio>
         </template>
         <template v-if="text">
-          <div v-html="renderedMsg" ref="messageElement"
-            class="flex flex-col text-sm font-light leading-tight gap-2 rendered-msg" />
+          <div
+            v-html="renderedMsg"
+            ref="messageElement"
+            class="flex flex-col text-sm font-light leading-tight gap-2 rendered-msg"
+          />
         </template>
       </div>
       <div class="ml-3 dot-pulse" v-if="!isComplete" />
@@ -147,9 +208,20 @@ onBeforeUnmount(() => {
   </div>
 </template>
 <style lang="scss">
-@use 'three-dots' with ($dot-width: 5px,
+@use "three-dots" with (
+  $dot-width: 5px,
   $dot-height: 5px,
-  $dot-color: var(--accent-color));
+  $dot-color: var(--accent-color)
+);
+
+.reasoning {
+  background-color: #f3f4f6; /* gris claro */
+  border-left: 3px solid #6366f1; /* violeta suave (como el ícono del usuario) */
+  padding: 0.5rem 1rem;
+  margin: 0.5rem 0 0.5rem 2rem;
+  font-size: 0.875rem; /* text-sm */
+  color: #374151; /* gris oscuro */
+}
 
 .rendered-msg pre {
   padding: 15px;
@@ -202,7 +274,7 @@ div a {
   padding: var(--half-spacing);
 }
 
-.rendered-msg>img {
+.rendered-msg > img {
   box-shadow: var(--shadow);
   border-radius: var(--spacing);
   width: fit-content;
