@@ -170,20 +170,20 @@ onBeforeUnmount(() => {
     </div>
 
     <div v-if="!isUser" class="reasoning">
-      <div class="flex justify-end items-center">
-        <button @click="isExpanded = !isExpanded" class="text-xs text-gray-500 hover:text-gray-700 transition">
-          {{ isExpanded ? "▼" : "►" }}
+      <div>
+        <button @click="isExpanded = !isExpanded" class="text-xs text-gray-600 hover:text-violet-500 transition">
+          {{ isExpanded ? "v" : "> . . ." }}
         </button>
       </div>
 
-      <div class="mt-4">
+      <div class="reasoning-textarea">
         <template v-if="isExpanded">
           <ul style="list-style: none; padding-left: 0">
             <li class="list-none" v-for="(step, index) in steps" :key="index">{{ step }}</li>
           </ul>
         </template>
         <template v-else>
-          <p>{{ currentStep }}</p>
+          <span>{{ currentStep }}</span>
         </template>
       </div>
     </div>
@@ -215,12 +215,27 @@ onBeforeUnmount(() => {
 );
 
 .reasoning {
-  background-color: #f3f4f6; /* gris claro */
-  border-left: 3px solid #6366f1; /* violeta suave (como el ícono del usuario) */
-  padding: 0.5rem 1rem;
-  margin: 0.5rem 0 0.5rem 2rem;
-  font-size: 0.875rem; /* text-sm */
-  color: #374151; /* gris oscuro */
+  background-color: #f3f4f6;
+  border-left: 3px solid #6366f1;
+  padding: 0.5rem 0.5rem;
+  height: fit-content;
+  margin: 0.5rem;
+  font-size: 0.875rem;
+  color: #374151;
+  display: flex;
+  flex-direction: row;
+
+  div button {
+    align-self: flex-start;
+    padding: 0;
+    margin: 0;
+    font-size: 1rem;
+    padding: 0.3rem 0.2rem;
+  }
+}
+
+.reasoning-textarea {
+  padding-top: 0.2rem;
 }
 
 .rendered-msg pre {
