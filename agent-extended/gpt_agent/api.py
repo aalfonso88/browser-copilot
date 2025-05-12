@@ -26,9 +26,11 @@ sessions_repo = SessionsRepository()
 questions_repo = QuestionsRepository()
 transcriptions_repo = TranscriptionsRepository()
 
-
 @app.get('/manifest.json')
 async def get_manifest(request: Request) -> Response:
+    print("OPENID_URL:", os.getenv("OPENID_URL"))
+    print("MODEL_NAME:", os.getenv("MODEL_NAME"))
+    print("OPENAI_API_KEY:", os.getenv("OPENAI_API_KEY"))
     return templates.TemplateResponse("manifest.json", {
         "request": request,
         "openid_url": os.getenv("MANIFEST_OPENID_URL", os.getenv("OPENID_URL")),

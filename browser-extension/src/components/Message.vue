@@ -5,11 +5,12 @@ import MarkdownIt from "markdown-it";
 import hljs from "highlight.js";
 import "highlight.js/styles/base16/gigavolt.min.css";
 import MarkdownItPlantuml from "markdown-it-plantuml";
-import { ExclamationCircleIcon, CircleFilledIcon } from "vue-tabler-icons";
+import { ExclamationCircleIcon, CircleFilledIcon, ChevronDownIcon, ChevronUpIcon } from "vue-tabler-icons";
 import NewPromptButton from "./NewPromptButton.vue";
 import CopyButton from "./CopyButton.vue";
 import * as echarts from "echarts";
 import moment from "moment";
+import { AgentFlow, FlowStep } from "../scripts/flow";
 
 const props = defineProps<{
   text: string;
@@ -20,35 +21,37 @@ const props = defineProps<{
   agentLogo: string;
   agentName: string;
   agentId: string;
+  steps: AgentFlow;
 }>();
 const { t } = useI18n();
 const renderedMsg = computed(() => (props.isUser ? props.text.replaceAll("\n", "<br/>") : renderMarkDown(props.text)));
 const messageElement = ref<HTMLElement | null>(null);
 const resizeObserver: ResizeObserver = new ResizeObserver(onResize);
 var chart: any;
+
 var prevWidth: number = 0;
 const isExpanded = ref(false);
+const showToggleButton = ref(false);
 
-const steps = ref<string[]>([]);
-const allSteps = ["Analizando el mensaje del usuario", "Llamando herramienta clock()", "Generando respuesta final..."];
+const allStepsToDisplay = computed(() => {
+  const staticSteps = ["Analyzing user request", "Consulting agent"];
+  const realSteps = props.steps?.steps?.map((s) => s.value?.trim()).filter((v): v is string => !!v) || [];
+  const finalStep = ["Composing final response"];
+  return [...staticSteps, ...realSteps, ...finalStep];
+});
 
-const currentStep = ref("");
-let stepIndex = 0;
+const visibleStepIndex = ref(0);
 
 onMounted(() => {
   const interval = setInterval(() => {
-    if (stepIndex < allSteps.length) {
-      const step = allSteps[stepIndex];
-      steps.value.push(step);
-      currentStep.value = step;
-      stepIndex++;
+    if (visibleStepIndex.value < allStepsToDisplay.value.length - 1) {
+      visibleStepIndex.value++;
     } else {
       clearInterval(interval);
-      setTimeout(() => {
-        currentStep.value = "";
-      }, 103);
+      visibleStepIndex.value++;
+      showToggleButton.value = true;
     }
-  }, 2000);
+  }, 1000);
 });
 
 function renderMarkDown(text: string) {
@@ -169,26 +172,36 @@ onBeforeUnmount(() => {
       </div>
     </div>
 
-    <div v-if="!isUser" class="reasoning">
-      <div>
-        <button @click="isExpanded = !isExpanded" class="text-xs text-gray-600 hover:text-violet-500 transition">
-          {{ isExpanded ? "v" : "> . . ." }}
-        </button>
-      </div>
-
-      <div class="reasoning-textarea">
+    <div
+      v-if="!isUser"
+      class="w-full bg-violet-100 text-xs text-gray-700 m-2 p-2 rounded reasoning-transition"
+      :class="{
+        'flex flex-col justify-start items-start max-h-[400px]': isExpanded,
+        'flex justify-center items-center max-h-[2rem]': !isExpanded,
+      }"
+    >
+      <ul style="list-style: none; padding-left: 0">
         <template v-if="isExpanded">
-          <ul style="list-style: none; padding-left: 0">
-            <li class="list-none" v-for="(step, index) in steps" :key="index">{{ step }}</li>
-          </ul>
+          <li class="list-none" v-for="(step, index) in allStepsToDisplay" :key="index">
+            {{ step }}
+          </li>
         </template>
-        <template v-else>
-          <span>{{ currentStep }}</span>
+
+        <template v-else-if="visibleStepIndex < allStepsToDisplay.length">
+          <li class="list-none">
+            {{ allStepsToDisplay[visibleStepIndex] }}
+          </li>
         </template>
+      </ul>
+
+      <div v-if="showToggleButton" class="w-full flex justify-center mt-1">
+        <button @click="isExpanded = !isExpanded" class="text-xs text-gray-600 hover:text-violet-500 transition">
+          <component :is="isExpanded ? ChevronUpIcon : ChevronDownIcon" class="w-5 h-4" />
+        </button>
       </div>
     </div>
 
-    <div class="mt-2 ml-8 mr-2">
+    <div class="mt-2 ml-8 mr-2" v-if="isUser || (!isUser && showToggleButton)">
       <div>
         <template v-if="file.data">
           <audio controls>
@@ -214,28 +227,9 @@ onBeforeUnmount(() => {
   $dot-color: var(--accent-color)
 );
 
-.reasoning {
-  background-color: #f3f4f6;
-  border-left: 3px solid #6366f1;
-  padding: 0.5rem 0.5rem;
-  height: fit-content;
-  margin: 0.5rem;
-  font-size: 0.875rem;
-  color: #374151;
-  display: flex;
-  flex-direction: row;
-
-  div button {
-    align-self: flex-start;
-    padding: 0;
-    margin: 0;
-    font-size: 1rem;
-    padding: 0.3rem 0.2rem;
-  }
-}
-
-.reasoning-textarea {
-  padding-top: 0.2rem;
+.reasoning-transition {
+  overflow: hidden;
+  transition: all 0.3s ease-in-out;
 }
 
 .rendered-msg pre {

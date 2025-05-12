@@ -49,6 +49,12 @@ class AgentFlow(BaseModel):
         return AgentFlow(steps=[AgentStep(action=AgentAction.MESSAGE, value=text)])
 
 
+class CustomBufferMemory(ConversationBufferMemory):
+    def save_context(self, inputs, outputs):
+        if "output" in outputs:
+            outputs = {"output": outputs["output"]}
+        super().save_context(inputs, outputs)
+
 # a sample tool to showcase how you can automate navigation in the browser
 @tool(return_direct=True)
 def contact_abstracta(full_name: str) -> str:
@@ -66,11 +72,11 @@ class Agent:
     def __init__(self, session: Session):
         self._session = session
         message_history = FileChatMessageHistory(get_session_path(session.id) + "/chat_history.json")
-        self._memory = ConversationBufferMemory(memory_key="chat_history", chat_memory=message_history,
+        self._memory = CustomBufferMemory(memory_key="chat_history", chat_memory=message_history,
                                                 return_messages=True)
         self._agent = self._build_agent(self._memory, [clock, contact_abstracta])
 
-    def _build_agent(self, memory: ConversationBufferMemory, tools: List[Tool]) -> AgentExecutor:
+    def _build_agent(self, memory: CustomBufferMemory, tools: List[Tool]) -> AgentExecutor:
         llm = self._build_llm()
         prompt = OpenAIFunctionsAgent.create_prompt(
             system_message=SystemMessage(content=os.getenv("SYSTEM_PROMPT")),
@@ -82,12 +88,13 @@ class Agent:
             tools=tools,
             memory=memory,
             verbose=True,
-            return_intermediate_steps=False,
+            return_intermediate_steps=True,
             max_iterations=int(os.getenv("AGENT_MAX_ITERATIONS", "3"))
         )
 
     def _build_llm(self):
         temperature = float(os.getenv("TEMPERATURE"))
+        print(temperature)
         base_url = os.getenv("OPENAI_API_BASE")
         if self._is_azure(base_url):
             return AzureChatOpenAI(deployment_name=os.getenv("AZURE_DEPLOYMENT_NAME"), temperature=temperature,
@@ -117,7 +124,7 @@ class Agent:
                                                  language=language)
         return ret.text
 
-    async def ask(self, question: str) -> AsyncIterator[AgentFlow | str]:
+    async def askOLD(self, question: str) -> AsyncIterator[AgentFlow | str]:
         callback = AsyncIteratorCallbackHandler()
         task = asyncio.create_task(self._agent.arun(input=question, callbacks=[callback]))
         resp = ""
@@ -135,3 +142,23 @@ class Agent:
                     logging.exception("Error parsing agent response", e)
                     yield ret
             yield ret
+
+
+    async def ask(self, question: str) -> AsyncIterator[AgentFlow | str]:
+        ret = await self._agent.ainvoke({"input": question})
+
+        steps = []
+        for step in ret.get("intermediate_steps", []):
+            if isinstance(step, tuple) and len(step) == 2:
+                action, observation = step
+                steps.append(AgentStep(
+                    action=AgentAction.MESSAGE,
+                    value=action.log
+                ))
+
+        if steps:
+            yield AgentFlow(steps=steps)
+
+        yield ret.get("output", "No output")
+
+    
