@@ -54,6 +54,10 @@ onMounted(() => {
   }, 1000);
 });
 
+function togglePanel() {
+  isExpanded.value = !isExpanded.value;
+}
+
 function renderMarkDown(text: string) {
   let md = new MarkdownIt({
     highlight: (code: string, lang: string) => {
@@ -174,13 +178,13 @@ onBeforeUnmount(() => {
 
     <div
       v-if="!isUser"
-      class="w-full bg-violet-100 text-xs text-gray-700 m-2 p-2 rounded reasoning-transition"
+      class="w-full bg-violet-100 text-xs text-gray-700 m-1 p-2 rounded reasoning-transition"
       :class="{
         'flex flex-col justify-start items-start max-h-[400px]': isExpanded,
-        'flex justify-center items-center max-h-[2rem]': !isExpanded,
+        'flex justify-center items-center max-h-[1.5rem] min-h-[1.5rem]': !isExpanded,
       }"
     >
-      <ul style="list-style: none; padding-left: 0">
+      <ul class="" style="list-style: none; padding-left: 0">
         <template v-if="isExpanded">
           <li class="list-none" v-for="(step, index) in allStepsToDisplay" :key="index">
             {{ step }}
@@ -188,15 +192,18 @@ onBeforeUnmount(() => {
         </template>
 
         <template v-else-if="visibleStepIndex < allStepsToDisplay.length">
-          <li class="list-none">
+          <li class="list-none h-[1.5rem] flex items-center justify-center w-full">
             {{ allStepsToDisplay[visibleStepIndex] }}
           </li>
         </template>
       </ul>
 
-      <div v-if="showToggleButton" class="w-full flex justify-center mt-1">
-        <button @click="isExpanded = !isExpanded" class="text-xs text-gray-600 hover:text-violet-500 transition">
-          <component :is="isExpanded ? ChevronUpIcon : ChevronDownIcon" class="w-5 h-4" />
+      <div v-if="showToggleButton" class="w-full flex justify-center h-[1.5rem]">
+        <button
+          @click="isExpanded = !isExpanded"
+          class="h-full w-full flex justify-center items-center text-xs text-gray-600 hover:text-violet-500 transition"
+        >
+          <component :is="isExpanded ? ChevronUpIcon : ChevronDownIcon" class="w-5 h-5" />
         </button>
       </div>
     </div>
@@ -229,7 +236,7 @@ onBeforeUnmount(() => {
 
 .reasoning-transition {
   overflow: hidden;
-  transition: all 0.3s ease-in-out;
+  transition: all 0.5s ease-in-out;
 }
 
 .rendered-msg pre {
