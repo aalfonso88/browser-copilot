@@ -124,26 +124,6 @@ class Agent:
                                                  language=language)
         return ret.text
 
-    async def askOLD(self, question: str) -> AsyncIterator[AgentFlow | str]:
-        callback = AsyncIteratorCallbackHandler()
-        task = asyncio.create_task(self._agent.arun(input=question, callbacks=[callback]))
-        resp = ""
-        async for token in callback.aiter():
-            resp += token
-            yield token
-        ret = await task
-        # when using tools tokens are not passed to the callback handler, so we need to get the response directly from
-        # agent run call
-        if ret != resp:
-            if ret.startswith("{\"steps\":"):
-                try:
-                    yield AgentFlow.model_validate_json(ret)
-                except Exception as e:
-                    logging.exception("Error parsing agent response", e)
-                    yield ret
-            yield ret
-
-
     async def ask(self, question: str) -> AsyncIterator[AgentFlow | str]:
         ret = await self._agent.ainvoke({"input": question})
 

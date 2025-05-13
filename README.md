@@ -6,7 +6,7 @@ Browser Copilot is a browser extension that allows you to use existing or custom
 
 ## Motivation
 
-The goal is to provide a versatile UI and simple framework to implement and use an ever-increasing set of copilots (AI assistants). These copilots can help in a wide range of tasks by taking advantage of browser extension capabilities. 
+The goal is to provide a versatile UI and simple framework to implement and use an ever-increasing set of copilots (AI assistants). These copilots can help in a wide range of tasks by taking advantage of browser extension capabilities.
 
 Here are a few examples of what these copilots can do:
 
@@ -22,6 +22,8 @@ Here are a few examples of what these copilots can do:
 2. Open the extension by clicking on its icon and add a new copilot by providing its base URL. The base URL should correspond to the location of `manifest.json` and `logo.png`, for example: `http://localhost:8000` if your agent is running locally.
 3. Start a new chat by clicking on a configured copilot, or, if the copilot has automatic activation, just use your browser and the copilot chat will automatically appear when the copilot activates.
 4. Save your preferred prompts directly from the chat. To quickly access them later, simply type '/' in the chat input.
+5. A collapsible panel displays an animated sequence of intermediate steps that illustrate the agent’s reasoning during the request.
+6. A stop button allows you to interrupt and cancel the current request process.
 
 At any point, you can close the copilot to later resume the conversation by the extension icon or right-clicking on the page and selecting `Toggle Browser Copilot`.
 
@@ -82,7 +84,7 @@ devbox run build
 
 We welcome all kinds of contributions!
 
-* ⭐ **Give this project a star** to make it more visible to the entire community. It lets us know that you are interested in this project, motivating us to invest more effort into it.
-* 📢 Spread the word about this project. If you make any publications (tweets, StackOverflow mentions, LinkedIn posts, Medium articles, etc.) about it, please let us know. We plan to add references to such publications in the future.
-* 🙋 Ask questions and request improvements by creating issues or opening discussions in the repository.
-* 🧑‍💻 If you enjoy coding, you can build new agents, helping us implement browser extension features or general improvements.
+- ⭐ **Give this project a star** to make it more visible to the entire community. It lets us know that you are interested in this project, motivating us to invest more effort into it.
+- 📢 Spread the word about this project. If you make any publications (tweets, StackOverflow mentions, LinkedIn posts, Medium articles, etc.) about it, please let us know. We plan to add references to such publications in the future.
+- 🙋 Ask questions and request improvements by creating issues or opening discussions in the repository.
+- 🧑‍💻 If you enjoy coding, you can build new agents, helping us implement browser extension features or general improvements.
