@@ -67,6 +67,7 @@ const lastMessage = computed((): ChatMessage => props.messages[props.messages.le
             :agent-name="agentName"
             :agent-id="agentId"
             :steps="message.steps"
+            :is-welcome="message.isWelcome"
           />
         </div>
         <ChatInput

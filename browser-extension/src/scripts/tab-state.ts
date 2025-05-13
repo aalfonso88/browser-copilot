@@ -31,6 +31,7 @@ export class ChatMessage {
   isComplete: boolean;
   isSuccess: boolean;
   steps: AgentFlow = { steps: [] };
+  isWelcome?: boolean = false;
 
   constructor(text: string, file: Record<string, string>, isUser: boolean, isComplete: boolean, isSuccess: boolean) {
     this.text = text;

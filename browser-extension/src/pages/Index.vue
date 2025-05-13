@@ -158,7 +158,9 @@ const onAgentActivation = (msg: AgentActivation) => {
     toast.error({ component: ToastMessage, props: { message: text } }, { icon: AlertCircleFilledIcon });
   } else {
     agent.value = Agent.fromJsonObject(msg.agent);
-    messages.value.push(ChatMessage.agentMessage(agent.value.manifest.welcomeMessage));
+    const welcome = ChatMessage.agentMessage(agent.value.manifest.welcomeMessage);
+    welcome.isWelcome = true;
+    messages.value.push(welcome);
   }
 };
 

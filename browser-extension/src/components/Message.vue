@@ -22,6 +22,7 @@ const props = defineProps<{
   agentName: string;
   agentId: string;
   steps: AgentFlow;
+  isWelcome?: boolean;
 }>();
 const { t } = useI18n();
 const renderedMsg = computed(() => (props.isUser ? props.text.replaceAll("\n", "<br/>") : renderMarkDown(props.text)));
@@ -43,6 +44,10 @@ const allStepsToDisplay = computed(() => {
 const visibleStepIndex = ref(0);
 
 onMounted(() => {
+  if (props.isWelcome) {
+    showToggleButton.value = true;
+    return;
+  }
   const interval = setInterval(() => {
     if (visibleStepIndex.value < allStepsToDisplay.value.length - 1) {
       visibleStepIndex.value++;
@@ -53,10 +58,6 @@ onMounted(() => {
     }
   }, 1000);
 });
-
-function togglePanel() {
-  isExpanded.value = !isExpanded.value;
-}
 
 function renderMarkDown(text: string) {
   let md = new MarkdownIt({
@@ -177,7 +178,7 @@ onBeforeUnmount(() => {
     </div>
 
     <div
-      v-if="!isUser"
+      v-if="!isUser && !props?.isWelcome"
       class="w-full bg-violet-100 text-xs text-gray-700 m-1 p-2 rounded reasoning-transition"
       :class="{
         'flex flex-col justify-start items-start max-h-[400px]': isExpanded,
