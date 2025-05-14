@@ -2,7 +2,9 @@
 
 Browser Copilot is a browser extension that allows you to use existing or custom-built AI assistants to help you in everyday web application tasks.
 
-![demo=](./demo.gif)
+![demo=](./demo1.gif)
+
+![demo=](./demo2.gif)
 
 ## Motivation
 
