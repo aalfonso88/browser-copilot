@@ -25,6 +25,7 @@ templates = Jinja2Templates(directory=assets_path)
 sessions_repo = SessionsRepository()
 questions_repo = QuestionsRepository()
 transcriptions_repo = TranscriptionsRepository()
+active_cancellations = {}
 
 @app.get('/manifest.json')
 async def get_manifest(request: Request) -> Response:
@@ -78,22 +79,33 @@ async def _find_session(session_id: str, user: str) -> Session:
 
 
 async def agent_response_stream(req: QuestionRequest, session: Session) -> AsyncIterator[bytes]:
+    session_id = session.id
+    active_cancellations[session_id] = False  
+
     try:
         answer_stream = Agent(session).ask(req.question)
         complete_answer = ""
+
         async for token in answer_stream:
+            if active_cancellations.get(session_id):
+                break
+
             if isinstance(token, str):
                 complete_answer = complete_answer + token
                 yield ServerSentEvent(data=token).encode()
             else:
                 complete_answer = complete_answer + token.model_dump_json()
                 yield ServerSentEvent(event="flow", data=token.model_dump_json()).encode()
-        ret = Question(question=req.question, answer=complete_answer, session=session)
-        await questions_repo.save_question(ret)
+            
+            if not active_cancellations.get(session_id):
+                ret = Question(question=req.question, answer=complete_answer, session=session)
+                await questions_repo.save_question(ret)
+
     except Exception as e:
         traceback.print_exception(e)
         yield ServerSentEvent(event="error").encode()
-
+    finally:
+        active_cancellations.pop(session_id, None)
 
 class TranscriptionRequest(BaseModel):
     file: Optional[str] = ""
@@ -110,3 +122,9 @@ async def answer_transcription(session_id: str, req: TranscriptionRequest, user:
     audio_file_path = await transcriptions_repo.save_audio(ret)
     text = Agent(session).transcript(audio_file_path)
     return TranscriptionResponse(text=text)
+
+@app.post('/sessions/{session_id}/cancel', status_code=204)
+async def cancel_session(session_id: str, user: Annotated[str, Depends(get_current_user)]):
+    session = await _find_session(session_id, user)
+    active_cancellations[session.id] = True
+    return Response(status_code=204)

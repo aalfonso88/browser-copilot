@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { ref, onBeforeMount, onBeforeUnmount, toRaw } from "vue";
+import { ref, onBeforeMount, onBeforeUnmount, toRaw, reactive } from "vue";
 import browser from "webextension-polyfill";
 import { useToast } from "vue-toastification";
 import { AlertCircleFilledIcon } from "vue-tabler-icons";
@@ -177,11 +177,22 @@ const onInteractionSummary = (msg: InteractionSummary) => {
 
 const onUserMessage = async (text: string, file: Record<string, string>) => {
   messages.value.push(ChatMessage.userMessage(text, file));
+
   const message = ChatMessage.agentMessage();
+  message.steps = { steps: reactive([]) };
   messages.value.push(message);
+
   const agentSession = await findAgentSession(await getCurrentTabId());
   agentSession!.processUserMessage(text, file, onAgentResponse, onAgentError, (flow) => {
-    message.steps = flow;
+    for (const step of flow.steps) {
+      if (message.steps.steps.length === 0) {
+        message.steps.steps.push(step);
+      } else {
+        setTimeout(() => {
+          message.steps.steps.push(step);
+        }, 1500);
+      }
+    }
   });
 };
 
@@ -216,6 +227,13 @@ const onAgentError = (error: any) => {
     messages.value.push(ChatMessage.agentErrorMessage(text));
   }
 };
+
+const onCancelMessage = async () => {
+  const tabId = await getCurrentTabId();
+  const agentSession = await findAgentSession(tabId);
+  if (!agentSession) return;
+  await agentSession.cancelResponse();
+};
 </script>
 
 <template>
@@ -231,6 +249,7 @@ const onAgentError = (error: any) => {
       :agent-name="agent.manifest.name"
       :agent-logo="agent.logo"
       :agent-capabilities="agent.manifest.capabilities || []"
+      :on-cancel-message="onCancelMessage"
       @userMessage="onUserMessage"
       @close="onCloseSidebar"
     />

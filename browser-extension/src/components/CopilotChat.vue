@@ -15,6 +15,7 @@ const props = defineProps<{
   agentLogo: string;
   agentCapabilities: string[];
   messages: ChatMessage[];
+  onCancelMessage: () => Promise<void>;
 }>();
 const emit = defineEmits<{
   (e: "close"): void;
@@ -66,6 +67,7 @@ const lastMessage = computed((): ChatMessage => props.messages[props.messages.le
             :agent-logo="agentLogo"
             :agent-name="agentName"
             :agent-id="agentId"
+            :on-cancel-message="props.onCancelMessage"
             :steps="message.steps"
             :is-welcome="message.isWelcome"
           />

@@ -33,6 +33,7 @@ class AgentAction(enum.Enum):
     CLICK = "click"
     FILL = "fill"
     GOTO = "goto"
+    END = "end"
 
 
 class AgentStep(BaseModel):
@@ -125,6 +126,12 @@ class Agent:
         return ret.text
 
     async def ask(self, question: str) -> AsyncIterator[AgentFlow | str]:
+
+        yield AgentFlow(steps=[
+            AgentStep(action=AgentAction.MESSAGE, value="Analyzing user request"),
+            AgentStep(action=AgentAction.MESSAGE, value="Consulting agent"),
+        ])
+
         ret = await self._agent.ainvoke({"input": question})
 
         steps = []
@@ -138,6 +145,10 @@ class Agent:
 
         if steps:
             yield AgentFlow(steps=steps)
+
+        yield AgentFlow(steps=[
+            AgentStep(action=AgentAction.END, value="Composing final response")
+        ])
 
         yield ret.get("output", "No output")
 

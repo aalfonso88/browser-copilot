@@ -3,7 +3,7 @@ import { Agent, AgentRuleCondition, AddHeaderRuleAction, RecordInteractionRuleAc
 import { AuthService } from "./auth";
 import { HttpServiceError, fetchJson } from "./http";
 import { BrowserMessage, InteractionSummary } from "./browser-message";
-import { AgentFlow, FlowExecutor, FlowStep } from "./flow";
+import { AgentFlow, FlowExecutor } from "./flow";
 
 export class AgentSession {
   tabId: number;
@@ -164,8 +164,6 @@ export class AgentSession {
         if (typeof part === "string") {
           msgHandler(part, false);
         } else {
-          console.log(typeof part);
-          console.log(part);
           stepHandler?.(part);
         }
       }
@@ -211,5 +209,9 @@ export class AgentSession {
     if (this.pollId) {
       clearInterval(this.pollId);
     }
+  }
+
+  public async cancelResponse() {
+    if (this.id) await this.agent.cancelResponse(this.id, this.authService);
   }
 }

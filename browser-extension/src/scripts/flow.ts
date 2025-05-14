@@ -2,30 +2,30 @@ import browser from "webextension-polyfill";
 import { FlowStepExecution } from "./browser-message";
 
 export class AgentFlow {
-  steps: FlowStep[]
+  steps: FlowStep[];
 
   constructor(steps: FlowStep[]) {
-      this.steps = steps
+    this.steps = steps;
   }
 
   public static fromJsonObject(obj: any): AgentFlow {
-      return new AgentFlow(obj.steps.map((s: any) => FlowStep.fromJsonObject(s)))
+    return new AgentFlow(obj.steps.map((s: any) => FlowStep.fromJsonObject(s)));
   }
 }
 
 export class FlowStep {
-  action: FlowAction
-  selector?: string
-  value?: string
-  
+  action: FlowAction;
+  selector?: string;
+  value?: string;
+
   constructor(action: FlowAction, selector?: string, value?: string) {
-      this.action = action
-      this.selector = selector
-      this.value = value
+    this.action = action;
+    this.selector = selector;
+    this.value = value;
   }
 
   public static fromJsonObject(obj: any): FlowStep {
-      return new FlowStep(obj.action, obj.selector, obj.value);
+    return new FlowStep(obj.action, obj.selector, obj.value);
   }
 }
 
@@ -34,14 +34,15 @@ export enum FlowAction {
   CLICK = "click",
   FILL = "fill",
   GOTO = "goto",
-  SCROLL = "scroll"
+  SCROLL = "scroll",
+  END = "end",
 }
 
 export class FlowExecutor {
   // since runner may generate page navigations, we need to save state in each step and resume execution when starting sidepanel (since entire copilot frame is re created)
   storageKey: string;
   tabId: number;
-  msgHandler?: (text: string, complete: boolean) => void
+  msgHandler?: (text: string, complete: boolean) => void;
 
   constructor(tabId: number, msgHandler?: (text: string, complete: boolean) => void) {
     this.tabId = tabId;
@@ -221,7 +222,6 @@ export class FlowExecutor {
       this.msgHandler!("", true);
     }
   }
-
 }
 
 class FlowState {

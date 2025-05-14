@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { computed, nextTick, ref, onMounted, onBeforeUnmount } from "vue";
+import { computed, nextTick, ref, onMounted, onBeforeUnmount, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import MarkdownIt from "markdown-it";
 import hljs from "highlight.js";
@@ -10,7 +10,7 @@ import NewPromptButton from "./NewPromptButton.vue";
 import CopyButton from "./CopyButton.vue";
 import * as echarts from "echarts";
 import moment from "moment";
-import { AgentFlow, FlowStep } from "../scripts/flow";
+import { AgentFlow } from "../scripts/flow";
 
 const props = defineProps<{
   text: string;
@@ -21,6 +21,7 @@ const props = defineProps<{
   agentLogo: string;
   agentName: string;
   agentId: string;
+  onCancelMessage: () => Promise<void>;
   steps: AgentFlow;
   isWelcome?: boolean;
 }>();
@@ -31,33 +32,34 @@ const resizeObserver: ResizeObserver = new ResizeObserver(onResize);
 var chart: any;
 
 var prevWidth: number = 0;
-const isExpanded = ref(false);
-const showToggleButton = ref(false);
 
-const allStepsToDisplay = computed(() => {
-  const staticSteps = ["Analyzing user request", "Consulting agent"];
-  const realSteps = props.steps?.steps?.map((s) => s.value?.trim()).filter((v): v is string => !!v) || [];
-  const finalStep = ["Composing final response"];
-  return [...staticSteps, ...realSteps, ...finalStep];
-});
+const panelExpanded = ref(true);
+function togglePanel() {
+  panelExpanded.value = !panelExpanded.value;
+}
 
-const visibleStepIndex = ref(0);
-
-onMounted(() => {
-  if (props.isWelcome) {
-    showToggleButton.value = true;
-    return;
-  }
-  const interval = setInterval(() => {
-    if (visibleStepIndex.value < allStepsToDisplay.value.length - 1) {
-      visibleStepIndex.value++;
-    } else {
-      clearInterval(interval);
-      visibleStepIndex.value++;
-      showToggleButton.value = true;
+const showFinalMessage = ref(false);
+watch(
+  () => props.steps.steps.at(-1)?.action,
+  (lastAction) => {
+    if (lastAction === "end" && !showFinalMessage.value) {
+      setTimeout(() => {
+        showFinalMessage.value = true;
+      }, 1500);
     }
-  }, 1000);
-});
+  }
+);
+
+const cancelRequested = ref(false);
+const cancelState = ref<"active" | "cancelled">("active");
+
+async function cancelResponse() {
+  cancelRequested.value = true;
+  cancelState.value = "cancelled";
+  try {
+    await props.onCancelMessage();
+  } catch (err) {}
+}
 
 function renderMarkDown(text: string) {
   let md = new MarkdownIt({
@@ -177,39 +179,44 @@ onBeforeUnmount(() => {
       </div>
     </div>
 
-    <div
-      v-if="!isUser && !props?.isWelcome"
-      class="w-full bg-violet-100 text-xs text-gray-700 m-1 p-2 rounded reasoning-transition"
-      :class="{
-        'flex flex-col justify-start items-start max-h-[400px]': isExpanded,
-        'flex justify-center items-center max-h-[1.5rem] min-h-[1.5rem]': !isExpanded,
-      }"
-    >
-      <ul class="" style="list-style: none; padding-left: 0">
-        <template v-if="isExpanded">
-          <li class="list-none" v-for="(step, index) in allStepsToDisplay" :key="index">
-            {{ step }}
+    <div v-if="!isUser && !isWelcome" class="w-full bg-violet-100 text-xs text-gray-700 m-2 p-2 rounded">
+      <div
+        :class="[
+          'relative overflow-hidden px-2 w-full text-xs text-gray-700 bg-violet-100 rounded',
+          panelExpanded ? 'max-h-[800px] pt-2 pb-2' : 'max-h-[28px]',
+          'transition-[max-height] duration-1000 ease-in-out',
+        ]"
+      >
+        <ul v-show="panelExpanded" class="w-full list-none pl-0">
+          <li v-for="(step, index) in steps.steps" :key="index" class="list-none">
+            {{ step.value }}
           </li>
-        </template>
+        </ul>
 
-        <template v-else-if="visibleStepIndex < allStepsToDisplay.length">
-          <li class="list-none h-[1.5rem] flex items-center justify-center w-full">
-            {{ allStepsToDisplay[visibleStepIndex] }}
-          </li>
-        </template>
-      </ul>
+        <div v-if="!showFinalMessage" class="absolute top-1 right-2 z-10">
+          <button
+            @click="cancelResponse"
+            :disabled="cancelState === 'cancelled'"
+            class="text-xs px-3 py-1 border rounded transition"
+            :class="
+              cancelState === 'cancelled'
+                ? 'border-gray-400 text-gray-400 cursor-not-allowed'
+                : 'border-red-500 text-red-500 hover:underline'
+            "
+          >
+            {{ cancelState === "cancelled" ? "Cancelado" : "Cancel" }}
+          </button>
+        </div>
 
-      <div v-if="showToggleButton" class="w-full flex justify-center h-[1.5rem]">
-        <button
-          @click="isExpanded = !isExpanded"
-          class="h-full w-full flex justify-center items-center text-xs text-gray-600 hover:text-violet-500 transition"
-        >
-          <component :is="isExpanded ? ChevronUpIcon : ChevronDownIcon" class="w-5 h-5" />
-        </button>
+        <div v-if="showFinalMessage" class="w-full flex justify-center mt-1">
+          <button @click="togglePanel" class="text-xs text-gray-600 hover:text-violet-500 transition -mt-2">
+            <component :is="panelExpanded ? ChevronUpIcon : ChevronDownIcon" class="w-5 h-5" />
+          </button>
+        </div>
       </div>
     </div>
 
-    <div class="mt-2 ml-8 mr-2" v-if="isUser || (!isUser && showToggleButton)">
+    <div v-if="isWelcome || isUser || (!isUser && showFinalMessage)" class="mt-2 ml-8 mr-2">
       <div>
         <template v-if="file.data">
           <audio controls>
@@ -234,11 +241,6 @@ onBeforeUnmount(() => {
   $dot-height: 5px,
   $dot-color: var(--accent-color)
 );
-
-.reasoning-transition {
-  overflow: hidden;
-  transition: all 0.5s ease-in-out;
-}
 
 .rendered-msg pre {
   padding: 15px;
